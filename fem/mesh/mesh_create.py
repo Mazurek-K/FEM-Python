@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 class Node:
     def __init__(self, id, x,y):
@@ -7,13 +6,18 @@ class Node:
         self.x = x
         self.y = y
 
+        self.elements = [] # related to elements
+
 class Element:
-    def __init__(self, id, node_i, node_j, type, EA, EI):
+    def __init__(self, id, node_i, node_j, el_type, EA, EI):
+        self.id = id
         self.node_i = node_i
         self.node_j = node_j
-        self.type = type # truss: 0; beam: 1
+        self.el_type = el_type # truss: 0; beam: 1
         self.EA = EA
         self.EI = EI
+
+        self.stiffness_matrix = None # related to stiffness
 
 class Load:
     def __init__(self, id_node, value_x, value_y):
@@ -34,11 +38,24 @@ class Model:
         self.loads  = []
         self.spcs = []
 
+        self.dof  = 0
+
+
     def add_node(self, id, x,y ):
         self.nodes[id] = Node(id, x,y)
 
-    def add_element(self, id, node_i, node_j, type, EA, EI):
-        self.elements[id] = Element(id, node_i, node_j, type, EA, EI)
+    def add_element(self, id, id_node_i, id_node_j, el_type, EA, EI):
+        node_i = self.nodes[id_node_i]
+        node_j = self.nodes[id_node_j]
+
+        element = Element(id, node_i, node_j, el_type, EA, EI)
+        self.elements[id] = element
+
+        # Link nodes to elements
+        node_i.elements.append(element)
+        node_j.elements.append(element)
+
+
 
     def add_load(self, id_node, value_x=0.0, value_y=0.0):
         load = Load(id_node, value_x, value_y)
@@ -48,40 +65,7 @@ class Model:
         spc = SPC(id_node, dof)
         self.spcs.append(spc)
 
-    def plot_input(self):
 
-        plt.figure()
-        for element in self.elements.values():
-            node_i = self.nodes[element.node_i]
-            node_j = self.nodes[element.node_j]
 
-            x = [node_i.x, node_j.x]
-            y = [node_i.y, node_j.y]
 
-            plt.plot(x, y, 'r')
 
-        for node in self.nodes.values():
-            plt.plot(node.x, node.y, 'o')
-            plt.text(node.x, node.y, f'{node.id}')
-
-        # Plot loads
-        for load in self.loads:
-            node = self.nodes[load.id_node]
-            plt.arrow(node.x, node.y,
-                      load.value_x * 0.001,
-                      load.value_y * 0.001,
-                      head_width=0.05)
-
-        # Plot SPCs (small squares)
-        for spc in self.spcs:
-            node = self.nodes[spc.id_node]
-            plt.plot(node.x, node.y, 's')
-
-        plt.gca().set_aspect('equal')
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.title("Structure")
-        plt.grid(True)
-        plt.show()
-
-#
