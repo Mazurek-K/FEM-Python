@@ -20,7 +20,7 @@ model.add_node(3, 0,1)
 model.add_element(0, 0, 1, 'truss', EA, 0)
 model.add_element(1, 1, 2, 'truss', EA, 0)
 model.add_element(2, 0, 2, 'truss', EA, 0)
-model.add_element(3, 2, 3, 'truss', EA, 5)
+model.add_element(3, 2, 3, 'beam', EA, 5)
 
 model.add_load(1,0,P)
 
@@ -33,16 +33,16 @@ model.add_spc(3, dof=1)
 plot_input(model)
 
 # --- Create the stiffness
-assemble(model)
-for element in model.elements.values():
-    print(element.stiffness_matrix)
+print(assemble(model))
+# for element in model.elements.values():
+#     print(element.stiffness_matrix)
 
 
-for node in model.nodes.values():
-    elements = node.elements
-    for el in elements:
-        print (el.id)
-    print("\n")
+# for node in model.nodes.values():
+    # elements = node.elements
+    # for el in elements:
+    #     print (el.id)
+    # print("\n")
 
 
 

@@ -38,8 +38,6 @@ class Model:
         self.loads  = []
         self.spcs = []
 
-        self.dof  = 0
-
 
     def add_node(self, id, x,y ):
         self.nodes[id] = Node(id, x,y)
