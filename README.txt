@@ -1,17 +1,9 @@
-fem_solver/
-│
-├─ main.py               # Entry point: runs analysis
-├─ fem/
-│   ├─ __init__.py
-│   ├─ mesh.py           # Define nodes, elements, connectivity
-│   ├─ materials.py      # Define material properties
-│   ├─ elements.py       # Element matrices (stiffness, mass)
-│   ├─ assembly.py       # Global K, M assembly and BC application
-│   ├─ solver.py         # Static & vibration solvers
-│   └─ utils.py          # Utilities (plotting, load definitions)
-│
-├─ examples/
-│   └─ simple_bar.py     # Example problem definitions
-│
-└─ results/
-    └─ *.csv, plots      # Optional output
+Basic fem solver:
+Plan:
+1. Static beam/truss
+2. Postprocessing
+3. Modal
+4. Base/ force vibration
+5. Plates
+6. Meshing etc
+

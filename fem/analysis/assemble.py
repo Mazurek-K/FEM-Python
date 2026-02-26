@@ -17,7 +17,6 @@ def compute_dof(model):
         largest_dof += dof_per_node
 
     total_dof = largest_dof
-    print(dof_dict)
 
     return total_dof, dof_dict
 
