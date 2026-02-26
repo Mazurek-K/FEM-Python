@@ -20,15 +20,18 @@ class Element:
         self.stiffness_matrix = None # related to stiffness
 
 class Load:
-    def __init__(self, id_node, value_x, value_y):
+    def __init__(self, id_node, value_x, value_y, value_rxy):
         self.id_node = id_node
         self.value_x = value_x
         self.value_y = value_y
+        self.value_rxy = value_rxy
 
 class SPC:
-    def __init__(self, id_node, dof):
+    def __init__(self, id_node, value_x, value_y, value_rxy):
         self.id_node = id_node
-        self.dof = dof
+        self.value_x = value_x
+        self.value_y = value_y
+        self.value_rxy = value_rxy
 
 
 class Model:
@@ -54,13 +57,12 @@ class Model:
         node_j.elements.append(element)
 
 
-
-    def add_load(self, id_node, value_x=0.0, value_y=0.0):
-        load = Load(id_node, value_x, value_y)
+    def add_load(self, id_node, value_x, value_y, value_rxy):
+        load = Load(id_node, value_x, value_y, value_rxy)
         self.loads.append(load)
 
-    def add_spc(self, id_node, dof):
-        spc = SPC(id_node, dof)
+    def add_spc(self, id_node, value_x, value_y, value_rxy):
+        spc = SPC(id_node, value_x, value_y, value_rxy)
         self.spcs.append(spc)
 
 
