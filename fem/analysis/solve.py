@@ -4,8 +4,17 @@ from colorama import init, Fore, Style
 init()  # initialize colorama
 
 
+class Results:
+    def __init__(self, model):
+        self.model = model
+        self.nodal_displacements = {}
+        self.nodal_forces = {}
+
+
+
 def solve_static(model):
     n, dof_dict = compute_dof(model)
+    print(dof_dict)
 
     k_global = assemble_stiffness(model, n, dof_dict)
     force_global = assemble_forces(model, n, dof_dict)
@@ -43,4 +52,15 @@ def solve_static(model):
         u[free_dofs] = u_f
         u[constrained_dofs] = u_c
 
-        return u
+        # Constuct results
+        result = Results(model)
+
+        for node_id, dof_indices in dof_dict.items():
+            result.nodal_displacements[node_id] = u[dof_indices]
+
+        return result
+
+
+
+def solve_modal(model):
+    pass
