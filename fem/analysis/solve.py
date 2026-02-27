@@ -1,5 +1,8 @@
 import numpy as np
 from fem.analysis import assemble_stiffness,assemble_forces,assemble_spcs, compute_dof
+from colorama import init, Fore, Style
+init()  # initialize colorama
+
 
 def solve_static(model):
     n, dof_dict = compute_dof(model)
@@ -13,9 +16,18 @@ def solve_static(model):
     K_ff = k_global[np.ix_(free_dofs, free_dofs)]
     F_f = force_global[free_dofs]
 
-    u_f = np.linalg.solve(K_ff, F_f)
 
-    u = np.zeros_like(force_global)
-    u[free_dofs] = u_f
+    rank = np.linalg.matrix_rank(K_ff)
+    n_f = len(F_f)
+    if rank != n_f:
+        print("Rank of K_ff: ", rank)
+        print("Number of prescribed forces: ", n_f)
+        print(Fore.RED + "Could not solve " + Style.RESET_ALL)
+        return None
+    else:
+        u_f = np.linalg.solve(K_ff, F_f)
 
-    return u
+        u = np.zeros_like(force_global)
+        u[free_dofs] = u_f
+
+        return u

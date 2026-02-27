@@ -10,10 +10,14 @@ def plot_input(model):
         node_i = element.node_i
         node_j = element.node_j
 
+        if element.el_type == 'beam':
+            color = 'r'
+        else:
+            color = 'b'
         x = [node_i.x, node_j.x]
         y = [node_i.y, node_j.y]
 
-        plt.plot(x, y, 'r')
+        plt.plot(x, y, color)
 
     # Plot nodes
     for node in model.nodes.values():
@@ -40,3 +44,11 @@ def plot_input(model):
     plt.title("Structure")
     plt.grid(True)
     plt.show()
+
+
+class Results:
+    def __init__(self, model):
+        self.model = model
+        self.nodal_displacements = {}
+        self.nodal_forces = {}
+        
