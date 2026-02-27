@@ -14,7 +14,6 @@ class Results:
 
 def solve_static(model):
     n, dof_dict = compute_dof(model)
-    print(dof_dict)
 
     k_global = assemble_stiffness(model, n, dof_dict)
     force_global = assemble_forces(model, n, dof_dict)

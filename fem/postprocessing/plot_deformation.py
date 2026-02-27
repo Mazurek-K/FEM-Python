@@ -46,7 +46,7 @@ def plot_input(model):
     plt.show()
 
 
-def plot_output(result):
+def plot_output(result,scale_factor):
     model = result.model
     nodal_displacements = result.nodal_displacements
 
@@ -55,8 +55,8 @@ def plot_output(result):
     for node_id, node_prop in model.nodes.items():
         node_disp  = nodal_displacements[node_id]
 
-        node_prop.x = node_prop.x + node_disp[0]
-        node_prop.y = node_prop.y + node_disp[1]
+        node_prop.x = node_prop.x + node_disp[0] * scale_factor
+        node_prop.y = node_prop.y + node_disp[1] * scale_factor
 
     # Plot elements
     for element in model.elements.values():
