@@ -33,6 +33,13 @@ class SPC:
         self.value_y = value_y
         self.value_rxy = value_rxy
 
+class SPD:
+    def __init__(self, id_node, value_x, value_y, value_rxy):
+        self.id_node = id_node
+        self.value_x = value_x
+        self.value_y = value_y
+        self.value_rxy = value_rxy
+
 
 class Model:
     def __init__(self):
@@ -40,6 +47,7 @@ class Model:
         self.elements = {}
         self.loads  = []
         self.spcs = []
+        self.spds = []
 
 
     def add_node(self, id, x,y ):
@@ -65,7 +73,9 @@ class Model:
         spc = SPC(id_node, value_x, value_y, value_rxy)
         self.spcs.append(spc)
 
-
+    def add_spd(self, id_node, value_x, value_y, value_rxy):
+        spd = SPD(id_node, value_x, value_y, value_rxy)
+        self.spds.append(spd)
 
 
 

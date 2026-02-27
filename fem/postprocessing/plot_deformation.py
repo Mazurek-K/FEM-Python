@@ -51,4 +51,3 @@ class Results:
         self.model = model
         self.nodal_displacements = {}
         self.nodal_forces = {}
-        

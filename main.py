@@ -22,15 +22,16 @@ model.add_node(1, 1.0, 0.0)
 model.add_node(2, 0.5,0.5)
 model.add_node(3, 0,1)
 
-model.add_element(0, 0, 1, 'truss', EA, EI)
-model.add_element(1, 1, 2, 'truss', EA, EI)
-model.add_element(2, 0, 2, 'truss', EA, EI)
-model.add_element(3, 2, 3, 'truss', EA, EI)
+model.add_element(0, 0, 1, 'beam', EA, EI)
+model.add_element(1, 1, 2, 'beam', EA, EI)
+model.add_element(2, 0, 2, 'beam', EA, EI)
+model.add_element(3, 2, 3, 'beam', EA, EI)
 
 model.add_load(1,0,P,0)
+model.add_spd(1,0.01, 0.01, 0)
 
 model.add_spc(0, 1,1,0)
-model.add_spc(2, 1,1,0)
+# model.add_spc(2, 1,0,0)
 model.add_spc(3, 1,1,0)
 
 plot_input(model)

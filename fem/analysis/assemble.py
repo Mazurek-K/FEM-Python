@@ -76,12 +76,26 @@ def assemble_spcs(model, n, dof_dict):
 
     for spc in model.spcs:
         node_id = spc.id_node
-        load_values = [spc.value_x, spc.value_y, spc.value_rxy]
+        spc_values = [spc.value_x, spc.value_y, spc.value_rxy]
 
         dofs = dof_dict[node_id]
 
         for i in range(len(dofs)):
-            global_spcs[dofs[i]] += load_values[i]
+            global_spcs[dofs[i]] += spc_values[i]
 
     return global_spcs
 
+
+def assemble_spds(model, n, dof_dict):
+    global_spds = np.zeros(n)
+
+    for spd in model.spds:
+        node_id = spd.id_node
+        spd_values = [spd.value_x, spd.value_y, spd.value_rxy]
+
+        dofs = dof_dict[node_id]
+
+        for i in range(len(dofs)):
+            global_spds[dofs[i]] += spd_values[i]
+
+    return global_spds
