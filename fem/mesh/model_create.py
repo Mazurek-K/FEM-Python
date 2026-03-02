@@ -51,6 +51,7 @@ class Model:
         self.spds = []
 
 
+
     def add_node(self, id, x,y,m ):
         self.nodes[id] = Node(id, x,y,m)
 

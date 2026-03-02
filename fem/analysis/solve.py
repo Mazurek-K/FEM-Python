@@ -17,6 +17,7 @@ class Results_modal:
         self.model = model
         self.omega  = []
         self.modes = []
+        self.dof_dict = {}
 
 
 def solve_static(model):
@@ -61,6 +62,7 @@ def solve_static(model):
         # Constuct results
         result = Results_static(model)
 
+
         for node_id, dof_indices in dof_dict.items():
             result.nodal_displacements[node_id] = u[dof_indices]
 
@@ -101,5 +103,6 @@ def solve_modal(model, n_modes):
     results = Results_modal(model)
     results.omega = omega
     results.modes = modes_full
+    results.dof_dict = dof_dict
 
     return results
