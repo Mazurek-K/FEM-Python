@@ -99,3 +99,17 @@ def assemble_spds(model, n, dof_dict):
             global_spds[dofs[i]] += spd_values[i]
 
     return global_spds
+
+
+def assemble_mass(model, n, dof_dict):
+    # only a lumped mass so far, improvement needed
+
+    mass_matrix = np.zeros([n,n])
+    for node in model.nodes.values():
+        mass  = node.m
+        node_id = node.id
+        dofs = dof_dict[node_id]
+        for i in range(len(dofs)):
+            mass_matrix[dofs[i], dofs[i]] = mass
+
+    return mass_matrix

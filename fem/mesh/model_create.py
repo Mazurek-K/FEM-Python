@@ -1,10 +1,11 @@
 import numpy as np
 
 class Node:
-    def __init__(self, id, x,y):
+    def __init__(self, id, x,y, m):
         self.id = id
         self.x = x
         self.y = y
+        self.m  = m
 
         self.elements = [] # related to elements
 
@@ -50,8 +51,8 @@ class Model:
         self.spds = []
 
 
-    def add_node(self, id, x,y ):
-        self.nodes[id] = Node(id, x,y)
+    def add_node(self, id, x,y,m ):
+        self.nodes[id] = Node(id, x,y,m)
 
     def add_element(self, id, id_node_i, id_node_j, el_type, EA, EI):
         node_i = self.nodes[id_node_i]

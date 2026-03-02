@@ -13,7 +13,7 @@ A = a**2
 I = a * a**3 / 12
 EA = E * A
 EI = E * I
-m = 0.0001
+m = 1
 
 P = -100 # vertical downward load
 
@@ -34,16 +34,16 @@ model.add_node(5, 0,0, m)
 
 
 
-model.add_element(0, 0, 1, 'truss', EA, EI)
-model.add_element(1, 0, 2, 'truss', EA, EI)
-model.add_element(2, 0, 3, 'truss', EA, EI)
-model.add_element(3, 1, 2, 'truss', EA, EI)
-model.add_element(4, 1, 3, 'truss', EA, EI)
-model.add_element(5, 2, 3, 'truss', EA, EI)
-model.add_element(6, 2, 4, 'truss', EA, EI)
-model.add_element(7, 2, 5, 'truss', EA, EI)
-model.add_element(8, 3, 4, 'truss', EA, EI)
-model.add_element(9, 3, 5, 'truss', EA, EI)
+model.add_element(0, 0, 1, 'beam', EA, EI)
+model.add_element(1, 0, 2, 'beam', EA, EI)
+model.add_element(2, 0, 3, 'beam', EA, EI)
+model.add_element(3, 1, 2, 'beam', EA, EI)
+model.add_element(4, 1, 3, 'beam', EA, EI)
+model.add_element(5, 2, 3, 'beam', EA, EI)
+model.add_element(6, 2, 4, 'beam', EA, EI)
+model.add_element(7, 2, 5, 'beam', EA, EI)
+model.add_element(8, 3, 4, 'beam', EA, EI)
+model.add_element(9, 3, 5, 'beam', EA, EI)
 
 
 
@@ -52,14 +52,13 @@ model.add_load(3,0,P,0)
 
 # model.add_spd(1,0.01, 0.01, 0)
 
-model.add_spc(4, 1,1,0)
-model.add_spc(5, 1,1,0)
+model.add_spc(4, 1,1,1)
+model.add_spc(5, 1,1,1)
 
 plot_input(model)
 
 res = solve_static(model)
-res_modal = solve_modal(model, 4)
+res_modal = solve_modal(model, 40)
 plot_output(res,10)
 
-print(res_modal.omega)
-print(res_modal.modes)
+print(res.nodal_displacements)
