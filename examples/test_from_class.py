@@ -59,12 +59,16 @@ model.add_spc(5, 1,1,0)
 # plot_input(model)
 
 res = solve_static(model)
-res_modal = solve_modal(model, 4)
+res_modal = solve_modal(model, 8)
 
+print(res.nodal_displacements)
+animate_static(res)
+plot_output(res, 10)
 animate_modal(res_modal,0)
 animate_modal(res_modal,1)
 animate_modal(res_modal,2)
 animate_modal(res_modal,3)
 
 
-print(res_modal.modes[:,0])
+
+

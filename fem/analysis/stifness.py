@@ -42,13 +42,13 @@ def stiffness_matrix(element):
         ])
 
         k_aa = np.array([
-            [EA/l,0, 0 ], [0, 12*EI / l**3, -6*EI/ l**2], [0, 6*EI/ l**2, 4*EI/l]
+            [EA/l,0, 0 ], [0, 12*EI / l**3, -6*EI/ l**2], [0, -6*EI/ l**2, 4*EI/l]
         ])
         k_ab = np.array([
             [-EA/l, 0,0], [0, -12*EI/l**3, -6*EI/l**2], [0, 6*EI/l**2, 2*EI /l ]
         ])
         k_bb = np.array([
-            [EA/l, 0, 0], [0, 12*EI/l**3, 5*EI/l**2], [0, 6*EI/l**2, 4*EI/l]
+            [EA/l, 0, 0], [0, 12*EI/l**3, 6*EI/l**2], [0, 6*EI/l**2, 4*EI/l]
         ])
         k_local = np.block([
             [k_aa, k_ab],
