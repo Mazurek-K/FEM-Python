@@ -4,7 +4,8 @@ import matplotlib as plt
 np.set_printoptions(edgeitems=30, linewidth=100000)
 
 from fem.mesh.model_create import Model
-from fem.postprocessing.plot_deformation import plot_input, plot_output, animate_static, animate_modal
+from fem.postprocessing.plot_deformation import plot_input, plot_output, animate_static, animate_modal, \
+    animate_static_v2
 from fem.analysis.solve import solve_static, solve_modal
 
 # --- Material / Section ---
@@ -62,12 +63,12 @@ res = solve_static(model)
 res_modal = solve_modal(model, 8)
 
 print(res.nodal_displacements)
-animate_static(res)
-plot_output(res, 10)
-animate_modal(res_modal,0)
-animate_modal(res_modal,1)
-animate_modal(res_modal,2)
-animate_modal(res_modal,3)
+animate_static_v2(res)
+# plot_output(res, 10)
+# animate_modal(res_modal,0)
+# animate_modal(res_modal,1)
+# animate_modal(res_modal,2)
+# animate_modal(res_modal,3)
 
 
 

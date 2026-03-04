@@ -152,16 +152,11 @@ def plot_output(result,scale_factor):
     plt.show()
 
 
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
-
 def animate_static_v2(result, max_scale=10, n_frames=60):
     model = result.model
     nodal_displacements = result.nodal_displacements
 
-    # Pre-define Shape Functions
+    # Shape Functions
     def N1(xi):
         return 1 - 3 * xi ** 2 + 2 * xi ** 3
 
@@ -182,21 +177,25 @@ def animate_static_v2(result, max_scale=10, n_frames=60):
     # ---- INITIAL DRAW ----
     for element in model.elements.values():
         color = 'r' if element.el_type == 'beam' else 'b'
-        n_pts = 30 if element.el_type == 'beam' else 2
+        n_pts = 10 if element.el_type == 'beam' else 2
         line, = ax.plot([], [], color, lw=1.5)
         element_data.append((line, element, n_pts))
 
     node_plots = []
     for node in model.nodes.values():
-        point, = ax.plot([], [], 'ko', ms=4)
+        point, = ax.plot([], [], 'ko', ms=2)
         node_plots.append((point, node))
 
-    # Static plot setup
+    # Static plot
     all_x = [n.x for n in model.nodes.values()]
     all_y = [n.y for n in model.nodes.values()]
-    pad_x, pad_y = 0.2 * (max(all_x) - min(all_x) or 1), 0.2 * (max(all_y) - min(all_y) or 1)
+    all_dx =  [disp[0] for disp in nodal_displacements.values()]
+    all_dy =  [disp[1] for disp in nodal_displacements.values()]
+
+    pad_x = 0.2 * (max(all_x) - min(all_x)) + max_scale * (max(all_dx) - min(all_dx)) or 1
+    pad_y = 0.2 * (max(all_y) - min(all_y)) + max_scale * (max(all_dy) - min(all_dy)) or 1
     ax.set_xlim(min(all_x) - pad_x, max(all_x) + pad_x)
-    ax.set_ylim(min(all_y) - pad_y-500, max(all_y) + pad_y+500)
+    ax.set_ylim(min(all_y) - pad_y, max(all_y) + pad_y)
     ax.set_aspect('equal')
     ax.grid(True)
 

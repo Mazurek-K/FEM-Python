@@ -113,3 +113,21 @@ def assemble_mass(model, n, dof_dict):
             mass_matrix[dofs[i], dofs[i]] = mass
 
     return mass_matrix
+
+
+def assemble_vibration_forces(vibr_loads, n, dof_dict):
+    global_force = np.zeros(n)
+    for load in vibr_loads:
+        node_id = load.id_node
+        # Evaluate functions if they are callable
+        value_x = 0 if callable(load.value_x) else load.value_x
+        value_y = 0 if callable(load.value_y) else load.value_y
+        value_rxy = 0 if callable(load.value_rxy) else load.value_rxy
+
+        load_values = [value_x, value_y, value_rxy]
+        dofs = dof_dict[node_id]
+
+        for i in range(len(dofs)):
+            global_force[dofs[i]] = load_values[i]
+
+    return global_force
