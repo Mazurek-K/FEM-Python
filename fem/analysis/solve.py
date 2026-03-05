@@ -124,14 +124,14 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
     # Mode displacement method (MDM)/ Mode acceleration method (MAM)
     # method  = 'MAM' or 'MDM'
 
-    # --- SOLVER ---
+    # -------- SOLVER --------
 
+
+    # Construct matrices
     n, dof_dict = compute_dof(model)
     k_global = assemble_stiffness(model, n, dof_dict)
     m_global  = assemble_mass(model, n, dof_dict)
-
     force_global = assemble_vibration_forces(loads, n, dof_dict) # vibration loads
-
     spc_global = assemble_spcs(model, n, dof_dict)
     spd_global = assemble_spds(model, n, dof_dict)
 
@@ -141,33 +141,33 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
     # Partition matrices
     K_ff = k_global[np.ix_(free_dofs, free_dofs)]
     M_ff = m_global[np.ix_(free_dofs, free_dofs)]
-    f_f = force_global[free_dofs]
-    n_free = len(f_f)
+    # f_f = force_global[free_dofs]
+    # n_free = len(f_f)
 
-    # Mu'' + Cu' + Ku = f
-    # First step: eliminate damping and set external force and I.C. to zero
-    # Damping null so far anyway
+    for force in force_global.functions.values():
+        print(force)
 
-    # --- Reduce the number of eigenvalues ---
-    # Number of sample points
+    # --- Reduce the number of eigenvalues to ones in the input bandwidth ---
     N = 500
-    # sample spacing
-    T = (1 / N) * 5
+    T = (1 / N) * 10
     x = np.linspace(0.0, N * T, N, endpoint=False)
+
     y = loads[0].value_y(x)
 
     yf = fft(y)
     xf = fftfreq(N, T)[:N // 2]
 
+    threshold = 0.05 # threshold corresponding to input max frequency in the fourier spectrum to consider
     y_values = 2.0 / N * np.abs(yf[0:N // 2])
-    indicies = np.where(y_values >= 0.1)[0]
+    indicies = np.where(y_values >= threshold)[0]
     max_considered_freq = xf[indicies[-1]]
+    sf = 1.5 # safety factor
+    omega_max = 2 * np.pi * max_considered_freq *sf  # Convert frequency to angular frequency
 
-    print(max_considered_freq)
-    eigvals, eigvecs = eigh(K_ff, M_ff, subset_by_index=[0, n_free - 1])
-    omega = np.sqrt(eigvals)
+    # --- Compute the selected low frequency eigenvalues/vectors ---
+    eigvals, eigvecs = eigh(K_ff, M_ff, subset_by_value=[0, omega_max **2])
 
+    U_l = eigvecs
+    diag_M = U_l.T @ M_ff @ U_l
+    diag_K = U_l.T @ K_ff @ U_l
 
-
-
-    pass

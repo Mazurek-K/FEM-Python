@@ -115,19 +115,56 @@ def assemble_mass(model, n, dof_dict):
     return mass_matrix
 
 
+# def assemble_vibration_forces(vibr_loads, n, dof_dict):
+#     global_force = np.zeros(n)
+#     for load in vibr_loads:
+#         node_id = load.id_node
+#         # Evaluate functions if they are callable
+#         # value_x = 0 if callable(load.value_x) else load.value_x
+#         # value_y = 0 if callable(load.value_y) else load.value_y
+#         # value_rxy = 0 if callable(load.value_rxy) else load.value_rxy
+#         value_x = load.value_x
+#         value_y = load.value_y
+#         value_rxy = load.value_rxy
+#
+#
+#         load_values = [value_x, value_y, value_rxy]
+#         dofs = dof_dict[node_id]
+#
+#         for i in range(len(dofs)):
+#             global_force[dofs[i]] = load_values[i]
+#
+#     return global_force
+
+
 def assemble_vibration_forces(vibr_loads, n, dof_dict):
-    global_force = np.zeros(n)
+    class ForceContainer:
+        def __init__(self, n):
+            self.n = n
+            self.functions = {}  # Key: DOF index, Value: function
+
+        def add_force(self, dof, func):
+            self.functions[dof] = func
+
+        def evaluate(self, t=None):
+            """Evaluate all functions at time `t` and return a numeric global_force array."""
+            global_force = np.zeros(self.n)
+            for dof, func in self.functions.items():
+                if callable(func):
+                    global_force[dof] = func(t) if t is not None else func
+                else:
+                    global_force[dof] = func
+            return global_force
+
+
+    force_container = ForceContainer(n)
+
     for load in vibr_loads:
         node_id = load.id_node
-        # Evaluate functions if they are callable
-        value_x = 0 if callable(load.value_x) else load.value_x
-        value_y = 0 if callable(load.value_y) else load.value_y
-        value_rxy = 0 if callable(load.value_rxy) else load.value_rxy
-
-        load_values = [value_x, value_y, value_rxy]
         dofs = dof_dict[node_id]
+        load_values = [load.value_x, load.value_y, load.value_rxy]
 
         for i in range(len(dofs)):
-            global_force[dofs[i]] = load_values[i]
+            force_container.add_force(dofs[i], load_values[i])
 
-    return global_force
+    return force_container

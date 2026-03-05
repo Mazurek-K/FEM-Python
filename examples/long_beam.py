@@ -9,18 +9,22 @@ from fem.analysis.solve import solve_static, solve_modal, solve_vibration_force
 from fem.analysis.vibration_ import Vibration_loads
 
 # --- Material / Section ---
-E = 10000
-a = np.sqrt(100)
+E = 68
+a = 5
 A = a**2
 I = a * a**3 / 12
 EA = E * A
 EI = E * I
-m = 0.0001
-P = -1
+ro = 2700/1000**3
+l = 500
+mass = ro*a*a*l
+
+node_n = 50
+
+m = mass/node_n
 
 model = Model()
-node_n = 50
-l = 500
+
 
 for i in range(0,node_n):
     el_l = l/(node_n-1)
@@ -30,7 +34,7 @@ for i in range(0,node_n-1):
     model.add_element(i, i, i+1, 'beam', EA, EI)
 
 def input_force(t):
-    return np.where(t <= 1, np.sin(10*t/np.pi), 0)
+    return np.where(t <= 1, np.sin(2*t*np.pi*0.5), 0)
 
 
 model.add_spc(0, 1,1,1)
