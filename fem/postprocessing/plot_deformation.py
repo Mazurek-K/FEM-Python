@@ -4,6 +4,7 @@ matplotlib.use('TkAgg')  # or 'Qt5Agg'
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.animation as animation
+from matplotlib.animation import FFMpegWriter  # Required for MP4
 
 def plot_input(model):
 
@@ -152,7 +153,7 @@ def plot_output(result,scale_factor):
     plt.show()
 
 
-def animate_static_v2(result, max_scale=10, n_frames=60):
+def animate_static_v2(result, max_scale=10, n_frames=60, save_as = None):
     model = result.model
     nodal_displacements = result.nodal_displacements
 
@@ -197,6 +198,11 @@ def animate_static_v2(result, max_scale=10, n_frames=60):
     ax.set_xlim(min(all_x) - pad_x, max(all_x) + pad_x)
     ax.set_ylim(min(all_y) - pad_y, max(all_y) + pad_y)
     ax.set_aspect('equal')
+    ax.set_aspect('equal')
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    title = "Static displacements"
+    ax.set_title(title)
     ax.grid(True)
 
     # ---- UPDATE FUNCTION ----
@@ -249,6 +255,12 @@ def animate_static_v2(result, max_scale=10, n_frames=60):
         return updated_artists
 
     ani = animation.FuncAnimation(fig, update, frames=n_frames, interval=40, blit=True)
+
+    if save_as:
+        writer = FFMpegWriter(fps=24)
+        ani.save(save_as, writer=writer)
+
+
     plt.show()
 
 
@@ -337,7 +349,7 @@ def animate_static(result, max_scale=10, n_frames=60):
     return ani  # Keep reference to prevent garbage collection
 
 
-def animate_modal(result, i_mode = 0, max_scale=1, n_frames=60):
+def animate_modal(result, i_mode = 0, max_scale=1, n_frames=60, save_as = None):
 
     model = result.model
     # if any(e.el_type == "beam" for e in model.elements.values()):
@@ -388,7 +400,8 @@ def animate_modal(result, i_mode = 0, max_scale=1, n_frames=60):
     ax.set_aspect('equal')
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
-    ax.set_title("Animated Structure")
+    title = "Mode " + str(i_mode+1 )
+    ax.set_title(title)
     border_ratio = 0.2
     plt.xlim(min_x - border_ratio * abs(diff_x), max_x + border_ratio * abs(diff_x))
     plt.ylim(min_y - border_ratio * abs(diff_y), max_y + border_ratio * abs(diff_y))
@@ -436,5 +449,9 @@ def animate_modal(result, i_mode = 0, max_scale=1, n_frames=60):
         interval=40,
         blit=True
     )
+
+    if save_as:
+        writer = FFMpegWriter(fps=24)
+        ani.save(save_as, writer=writer)
 
     plt.show()

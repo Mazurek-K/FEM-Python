@@ -3,10 +3,32 @@ import numpy as np
 
 
 def compute_dof(model):
+    """
+    Compute the degrees of freedom (DOF) for each node in a structural model.
+
+    This function assigns sequential DOF indices to each node in the model.
+    The number of DOFs per node depends on the type of elements in the model:
+    - 3 DOFs per node if the model contains beam elements (e.g., [u_x, u_y, θ_z]).
+    - 2 DOFs per node otherwise (e.g., [u_x, u_y]).
+
+    Args:
+        model: A model object containing:
+            - `nodes`: A dictionary of node IDs.
+            - `elements`: A dictionary of elements, each with an `el_type` attribute.
+
+    Returns:
+        tuple: (total_dof, dof_dict)
+            - `total_dof`: Total number of DOFs in the model.
+            - `dof_dict`: A dictionary mapping each node ID to its list of DOF indices.
+
+    Example:
+        >> elements = {1: Element('beam'), 2: Element('truss')}  # Mixed element types
+        >> model = Model(nodes, elements)
+        >> compute_dof(model)
+            (9, {0: [0, 1, 2], 1: [3, 4, 5], 2: [6, 7, 8]})
+    """
     largest_dof = 0
     dof_dict = {}  # dof for each node assign  dof-s
-    force_array = {}  # force component for each dof
-    spc_array = {}  # spc for each dof
 
     # Decide global DOF per node based on model elements
     dof_per_node = 3 if any(e.el_type == 'beam' for e in model.elements.values()) else 2
@@ -111,53 +133,35 @@ def assemble_mass(model, n, dof_dict):
         dofs = dof_dict[node_id]
         for i in range(len(dofs)):
             mass_matrix[dofs[i], dofs[i]] = mass
-
     return mass_matrix
 
 
-# def assemble_vibration_forces(vibr_loads, n, dof_dict):
-#     global_force = np.zeros(n)
-#     for load in vibr_loads:
-#         node_id = load.id_node
-#         # Evaluate functions if they are callable
-#         # value_x = 0 if callable(load.value_x) else load.value_x
-#         # value_y = 0 if callable(load.value_y) else load.value_y
-#         # value_rxy = 0 if callable(load.value_rxy) else load.value_rxy
-#         value_x = load.value_x
-#         value_y = load.value_y
-#         value_rxy = load.value_rxy
-#
-#
-#         load_values = [value_x, value_y, value_rxy]
-#         dofs = dof_dict[node_id]
-#
-#         for i in range(len(dofs)):
-#             global_force[dofs[i]] = load_values[i]
-#
-#     return global_force
-
 
 def assemble_vibration_forces(vibr_loads, n, dof_dict):
+    """
+    Assembles vibration forces into a container mapping DOFs to force values.
+
+    Args:
+        vibr_loads: List of vibration loads (each with id_node, value_x, value_y, value_rxy).
+        n: Total number of DOFs.
+        dof_dict: Maps node IDs to their DOF indices.
+
+    Returns:
+        ForceContainer: Object with `functions` dict: {dof_index: force_value}. Equal to 0 if no force is present.
+    """
+
     class ForceContainer:
         def __init__(self, n):
-            self.n = n
             self.functions = {}  # Key: DOF index, Value: function
 
         def add_force(self, dof, func):
             self.functions[dof] = func
 
-        def evaluate(self, t=None):
-            """Evaluate all functions at time `t` and return a numeric global_force array."""
-            global_force = np.zeros(self.n)
-            for dof, func in self.functions.items():
-                if callable(func):
-                    global_force[dof] = func(t) if t is not None else func
-                else:
-                    global_force[dof] = func
-            return global_force
-
-
     force_container = ForceContainer(n)
+
+    for i in range (0,n):
+        force_container.add_force(i, 0)
+
 
     for load in vibr_loads:
         node_id = load.id_node

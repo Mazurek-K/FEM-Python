@@ -1,9 +1,11 @@
 from scipy.fft import fft, fftfreq
 import numpy as np
 # Number of sample points
-N = 500
+N = 1000
 # sample spacing
 T = (1/N)*10
+
+
 x = np.linspace(0.0, N*T, N, endpoint=False)
 # y = np.sin(50.0 * 2.0*np.pi*x) + 0.5*np.sin(80.0 * 2.0*np.pi*x)
 
