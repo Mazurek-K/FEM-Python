@@ -1,6 +1,6 @@
 
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 np.set_printoptions(edgeitems=30, linewidth=100000)
 
 from fem.mesh.model_create import Model
@@ -9,7 +9,7 @@ from fem.analysis.solve import solve_static, solve_modal, solve_vibration_force
 from fem.analysis.vibration_ import Vibration_loads
 
 # --- Material / Section ---
-E = 68
+E = 68000
 a = 5
 A = a**2
 I = a * a**3 / 12
@@ -19,7 +19,7 @@ ro = 2700/1000**3
 l = 500
 mass = ro*a*a*l
 
-node_n = 50
+node_n = 40
 
 m = mass/node_n
 
@@ -46,9 +46,5 @@ vl.add_load(node_n-1, 0, input_force1, 0)  # Pass the function and its arguments
 vl.add_load(node_n-4, input_force2, 1, 0)  # Pass the function and its arguments
 
 res = solve_vibration_force(model, vl.loads)
-
-
-
-
 
 

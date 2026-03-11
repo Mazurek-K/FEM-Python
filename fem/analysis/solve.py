@@ -1,12 +1,15 @@
 import numpy as np
+from numpy.matlib import zeros
 from scipy.linalg import eigh   # for symmetric matrices
 import math
 from scipy.fft import fft, fftfreq
-
+from scipy.integrate import cumulative_trapezoid
 
 from fem.analysis import (assemble_stiffness,assemble_forces,assemble_spcs, compute_dof,
                           assemble_spds, assemble_mass, assemble_vibration_forces)
 from colorama import init, Fore, Style
+
+
 init()  # initialize colorama
 
 
@@ -177,30 +180,41 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
     # --- Compute the selected low frequency eigenvalues/vectors ---
     eigvals, eigvecs = eigh(K_ff, M_ff, subset_by_value=[0, omega_max **2])
 
+    # Angular velocities considered
+    omegas = np.sqrt(eigvals)
+
     # time vector to consider: 5s with 10*max forcing frequency
     time_end = 5
     time_n = int(time_end * np.floor(omega_max / (2 * np.pi))) * 10
-    t = np.linspace(0, time_end, time_n)
+    timespace = np.linspace(0, time_end, time_n)
 
     # Forcing values over time
     force_values = []
     for force in force_global.functions.values():
         if callable(force):
-            force_values.append(force(t))
+            force_values.append(force(timespace))
         else:
-            force_values.append(np.ones_like(t)*force)
+            force_values.append(np.ones_like(timespace)*force)
     force_matrix = np.vstack(force_values)
 
     # Partition force - free-free
-    F_f = force_matrix[np.ix_(free_dofs)]
+    F_f = force_matrix[np.ix_(free_dofs)] # columns of consecutive forces in time
 
     # Projection into modal space
     U_l = eigvecs
+    n_reduced = U_l.shape[1] # size of the reduced problem
+
     projected_M = U_l.T @ M_ff @ U_l
     projected_K = U_l.T @ K_ff @ U_l
 
+    projected_F = np.empty((n_reduced, 0))  # Start with 0 columns
     for col in F_f.T:
-        projected_F = np.hstack(U_l.T * col)
+        projected_col = U_l.T @ col
+        projected_col = projected_col.reshape(-1, 1)
+
+        # Stack horizontally
+        projected_F = np.hstack((projected_F, projected_col))
+
 
     # simplifying the matrix, i guess it is not diagonal since numerical inaccuracies - TBC
     diag_M = np.diag(projected_M)
@@ -208,12 +222,34 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
     diag_M = np.diag(diag_M)
     diag_K = np.diag(diag_K)
 
-    n = U_l.shape[1] # size of the reduced problem
+    # Introduce damping termns
+    xi = np.ones(n_reduced) * 0.1
 
+    #
+    # ---- Integrate ---
+    integral = np.zeros((n_reduced, time_n))  # Initialize the array to store all integrals
 
+    def int_fun(tau_, t_, tau_n_, q_i, xi_i, omega_i, omega_i_d):
+        return np.exp(-xi_i * omega_i * (t_ - tau_)) * np.sin(omega_i_d * (t_ - tau_)) * q_i
 
+    for i in range(n_reduced):
+        m_i = diag_M[i, i]
+        omega_i = omegas[i]
+        xi_i = xi[i]
+        omega_i_d = omega_i * np.sqrt(1 - xi_i ** 2)
+        const_term = 1 / (m_i * omega_i_d)
 
+        for i_t, t in enumerate(timespace):
+            time_t = timespace[0:i_t + 1]
 
+            # Evaluate the integrand at each tau in time_t
+            integrand = np.array(
+                [int_fun(tau, t, i_t, projected_F[i, i_t], xi_i, omega_i, omega_i_d) for tau in time_t])
+
+            integral_i = cumulative_trapezoid(integrand, time_t, initial=0)
+
+            # Store the result for this mode and time step
+            integral[i, i_t] = const_term * integral_i[-1]
 
 
 
