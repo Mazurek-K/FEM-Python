@@ -26,6 +26,15 @@ class Results_modal:
         self.modes = []
         self.dof_dict = {}
 
+class Results_vibration:
+    def __init__(self, model):
+        self.model = model
+        self.U_t  = []
+        self.dof_dict = {}
+        self.times = []  # Time values corresponding to each column of U_t
+
+
+
 
 def solve_static(model):
     n, dof_dict = compute_dof(model)
@@ -146,7 +155,7 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
     N = 1000 # number of fourier check time steps
     T = (1 / N) * 5 # step size
     x = np.linspace(0.0, N * T, N, endpoint=False)
-    max_omegas = []
+
     for force in force_global.functions.values():
         if callable(force):
             # Compute FFT
@@ -154,24 +163,22 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
             xf = fftfreq(N, T)[:N // 2]
             y_values = 2.0 / N * np.abs(yf[0:N // 2])
 
-            # 5% of the peak amplitude threshold
-            threshold = 0.05 * np.max(y_values)
+            # 1% of the peak amplitude threshold (the smaller the value the more precise the solution will be)
+            threshold = 0.01 * np.max(y_values)
 
             # Find frequencies above threshold
             indicies = np.where(y_values >= threshold)[0]
 
             # Highest significant frequency
             max_considered_freq = xf[indicies[-1]]
-            sf = 1.2 # safety factor
+            sf = 1 # safety factor
             omega_max = 2 * np.pi * max_considered_freq *sf  # Convert frequency to angular frequency
-            max_omegas.append(omega_max)
 
-    # Maximum forcing angular velocity to consider
-    omega_max = max(max_omegas)
 
     # Model reduction to free-free
     constrained_dofs = np.where((spc_global != 0) | (spd_global != 0))[0]
     free_dofs = np.setdiff1d(np.arange(n), constrained_dofs)
+    n_free = free_dofs.size
 
     # Partition matrices - free-free
     K_ff = k_global[np.ix_(free_dofs, free_dofs)]
@@ -206,8 +213,8 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
 
     projected_M = U_l.T @ M_ff @ U_l
     projected_K = U_l.T @ K_ff @ U_l
-
     projected_F = np.empty((n_reduced, 0))  # Start with 0 columns
+
     for col in F_f.T:
         projected_col = U_l.T @ col
         projected_col = projected_col.reshape(-1, 1)
@@ -215,7 +222,7 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
         # Stack horizontally
         projected_F = np.hstack((projected_F, projected_col))
 
-
+    print(projected_F)
     # simplifying the matrix, i guess it is not diagonal since numerical inaccuracies - TBC
     diag_M = np.diag(projected_M)
     diag_K = np.diag(projected_K)
@@ -225,13 +232,10 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
     # Introduce damping termns
     xi = np.ones(n_reduced) * 0.1
 
-    #
-    # ---- Integrate ---
-    integral = np.zeros((n_reduced, time_n))  # Initialize the array to store all integrals
+    # Initialize Q
+    Q = np.zeros((n_reduced, time_n))
 
-    def int_fun(tau_, t_, tau_n_, q_i, xi_i, omega_i, omega_i_d):
-        return np.exp(-xi_i * omega_i * (t_ - tau_)) * np.sin(omega_i_d * (t_ - tau_)) * q_i
-
+    # Precompute constants
     for i in range(n_reduced):
         m_i = diag_M[i, i]
         omega_i = omegas[i]
@@ -239,17 +243,46 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
         omega_i_d = omega_i * np.sqrt(1 - xi_i ** 2)
         const_term = 1 / (m_i * omega_i_d)
 
-        for i_t, t in enumerate(timespace):
-            time_t = timespace[0:i_t + 1]
+        # Precompute modal forces for all time steps
+        modal_forces = np.zeros(time_n)
+        for j in range(time_n):
+            modal_forces[j] = U_l[:, i].T @ F_f[:, j]
 
-            # Evaluate the integrand at each tau in time_t
-            integrand = np.array(
-                [int_fun(tau, t, i_t, projected_F[i, i_t], xi_i, omega_i, omega_i_d) for tau in time_t])
+        # Compute Duhamel integral for each time step
+        for j in range(time_n):
+            t = timespace[j]
+            # Integrate from tau=0 to tau=t
+            integrand = np.array([
+                np.exp(-xi_i * omega_i * (t - tau)) *
+                np.sin(omega_i_d * (t - tau)) *
+                modal_forces[k]
+                for k, tau in enumerate(timespace[:j + 1])
+            ])
+            integral = cumulative_trapezoid(integrand, timespace[:j + 1], initial=0)
+            Q[i, j] = const_term * integral[-1]
 
-            integral_i = cumulative_trapezoid(integrand, time_t, initial=0)
+    ###################
 
-            # Store the result for this mode and time step
-            integral[i, i_t] = const_term * integral_i[-1]
+    # --- Mode Displacement Method (MDM) ---
+    u_t = np.zeros((n_free,time_n))
+    for i_t, t in enumerate(timespace):
+        uiq = np.zeros((n_free,1))
+        for i in range(0,n_reduced):
+            col =  U_l[:,i] * Q[i,i_t]
+            uiq += col.reshape(-1,1)
+
+        u_t[:,i_t] = uiq.flatten()
+
+    # Combine to global result array
+    u_t_full = np.zeros((n,time_n))
+    u_t_full[free_dofs, :] = u_t
+
+    # Assign results
+    result = Results_vibration(model)
+    result.U_t = u_t_full
+    result.dof_dict = dof_dict
+    result.times = timespace
+    return result
 
 
 

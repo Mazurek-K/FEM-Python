@@ -455,3 +455,130 @@ def animate_modal(result, i_mode = 0, max_scale=1, n_frames=60, save_as = None):
         ani.save(save_as, writer=writer)
 
     plt.show()
+
+from matplotlib.animation import FuncAnimation, FFMpegWriter
+
+from matplotlib.animation import FuncAnimation, FFMpegWriter
+
+def animate_forced_vibration(result, max_scale=2, n_frames_per_step=1, save_as=None):
+    """
+    Animate the forced vibration response of the structure over all time steps.
+
+    Parameters:
+        result: Results_vibration object
+        max_scale: Scaling factor for visualization
+        n_frames_per_step: Number of animation frames per time step
+        save_as: File path to save the animation (optional)
+    """
+    model = result.model
+    U_t = result.U_t  # Displacements for all time steps (n x time_n)
+    times = result.times  # Time values for all time steps
+
+    # Store original coordinates
+    original_coords = {}
+    for node_id, node in model.nodes.items():
+        original_coords[node_id] = (node.x, node.y)
+
+
+    # Initialize plot
+    fig, ax = plt.subplots()
+
+    # Draw elements and nodes
+    element_lines = []
+    node_plots = []
+
+    # --- INITIAL DRAW ---
+    for element in model.elements.values():
+        color = 'r' if element.el_type == 'beam' else 'b'
+        xi0, yi0 = original_coords[element.node_i.id]
+        xj0, yj0 = original_coords[element.node_j.id]
+        line, = ax.plot([xi0, xj0], [yi0, yj0], color)
+        element_lines.append((line, element))
+
+    for node in model.nodes.values():
+        x0, y0 = original_coords[node.id]
+        point, = ax.plot([x0], [y0], '.')
+        node_plots.append((point, node))
+
+    for spc in model.spcs:
+        node = model.nodes[spc.id_node]
+        ax.plot(node.x, node.y, 's')
+
+    ax.set_aspect('equal')
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_title("Forced Vibration Response Over Time")
+    border_ratio = 0.2
+    plt.xlim(-5,600)
+    plt.ylim(-140 ,140)
+    ax.grid(True)
+
+    # Add a text annotation for the current time
+    time_text = ax.text(0.02, 0.95, '', transform=ax.transAxes)
+
+    # --- UPDATE FUNCTION ---
+    def update(frame):
+        # Calculate the current time step and frame within that step
+        time_step = frame
+
+        # Scale factor for visualization (smooth oscillation)
+        scale = max_scale
+
+        # Get displacements for the current time step
+        displacements = U_t[:, time_step]
+
+        # Map displacements to nodes
+        nodal_displacements = {}
+        for node_id, dof_indices in result.dof_dict.items():
+            nodal_displacements[node_id] = displacements[dof_indices]
+
+        # Update element lines
+        for (line, element) in element_lines:
+            node_i = element.node_i
+            node_j = element.node_j
+
+            xi0, yi0 = original_coords[node_i.id]
+            xj0, yj0 = original_coords[node_j.id]
+
+            di = nodal_displacements[node_i.id]
+            dj = nodal_displacements[node_j.id]
+
+            xi = xi0 + di[0] * scale
+            yi = yi0 + di[1] * scale
+            xj = xj0 + dj[0] * scale
+            yj = yj0 + dj[1] * scale
+
+            line.set_data([xi, xj], [yi, yj])
+
+        # Update node positions
+        for (point, node) in node_plots:
+            x0, y0 = original_coords[node.id]
+            d = nodal_displacements[node.id]
+
+            x = x0 + d[0] * scale
+            y = y0 + d[1] * scale
+
+            point.set_data([x], [y])
+
+        # Update the time text
+        time_text.set_text(f'Time = {times[time_step]:.2f} s')
+
+        return [l[0] for l in element_lines] + [p[0] for p in node_plots] + [time_text]
+
+    # Total number of frames
+    total_frames = len(times) * n_frames_per_step
+
+    # --- ANIMATION ---
+    ani = FuncAnimation(
+        fig,
+        update,
+        frames=total_frames,
+        interval=10,
+        blit=True
+    )
+
+    if save_as:
+        writer = FFMpegWriter(fps=24)
+        ani.save(save_as, writer=writer)
+
+    plt.show()
