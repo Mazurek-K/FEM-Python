@@ -460,7 +460,7 @@ from matplotlib.animation import FuncAnimation, FFMpegWriter
 
 from matplotlib.animation import FuncAnimation, FFMpegWriter
 
-def animate_forced_vibration(result, max_scale=2, n_frames_per_step=1, save_as=None):
+def animate_forced_vibration(result, max_scale=10, n_frames_per_step=1, save_as=None):
     """
     Animate the forced vibration response of the structure over all time steps.
 
@@ -507,14 +507,15 @@ def animate_forced_vibration(result, max_scale=2, n_frames_per_step=1, save_as=N
     ax.set_aspect('equal')
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
-    ax.set_title("Forced Vibration Response Over Time")
+    title = "Forced Vibration Response Over Time    Scale: " + str(max_scale)
+    ax.set_title(title)
     border_ratio = 0.2
-    plt.xlim(-5,600)
-    plt.ylim(-140 ,140)
+    plt.xlim(-100,2500)
+    plt.ylim(-300 ,550)
     ax.grid(True)
 
     # Add a text annotation for the current time
-    time_text = ax.text(0.02, 0.95, '', transform=ax.transAxes)
+    time_text = ax.text(0.02, 0.9, '', transform=ax.transAxes)
 
     # --- UPDATE FUNCTION ---
     def update(frame):
@@ -578,7 +579,15 @@ def animate_forced_vibration(result, max_scale=2, n_frames_per_step=1, save_as=N
     )
 
     if save_as:
-        writer = FFMpegWriter(fps=24)
-        ani.save(save_as, writer=writer)
+        writer = FFMpegWriter(
+            fps=30,
+            bitrate=15000
+        )
+
+        ani.save(
+            save_as,
+            writer=writer,
+            dpi=300
+        )
 
     plt.show()

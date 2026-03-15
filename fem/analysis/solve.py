@@ -124,20 +124,38 @@ def solve_modal(model, n_modes):
     return results
 
 
-def solve_vibration_force(model, loads,  method = 'MAM'):
-    # Force loaded case
+def solve_vibration_force(model, loads, time = 5, damping =0.01, method = 'MAM'):
+    """
+        Solves the dynamic response of a structural model under vibration loads using modal analysis.
 
-    # Split into loaded and unloaded part, take the first one
+        This function constructs global stiffness and mass matrices, applies boundary conditions,
+        and computes the system's time-domain response using the Mode Acceleration Method (MAM).
+        The solution involves:
+        - Frequency analysis of input loads via FFT to determine significant forcing frequencies.
+        - Model reduction to free-free degrees of freedom and modal projection.
+        - Time integration of modal equations using the Duhamel integral.
+        - Reconstruction of physical displacements via Mode Displacement Method (MDM).
 
-    # 1) Modal response method
-    # 2) Direct response analysis
+        Parameters:
+            model: Structural model object containing geometry, material properties, and connectivity.
+            loads: Dictionary of applied vibration forces (callable functions or constants).
+            time: Time length of the simulation: int [seconds]
+            damping: Coefficients of lower modes to compute Raleigh damping
+            method: (Optional) Solution method. Default is 'MAM' (Mode Acceleration Method).
 
-    # -> 1) -> Normal modes approach
-    # Mode displacement method (MDM)/ Mode acceleration method (MAM)
-    # method  = 'MAM' or 'MDM'
+        Returns:
+            result (Results_vibration): Object containing:
+                - U_t: Displacement matrix over time for all degrees of freedom.
+                - dof_dict: Dictionary mapping degrees of freedom to nodes.
+                - times: Time vector for the computed response.
+
+        Notes:
+            - Assumes 2% damping (xi = 0.02) for all modes.
+            - Time integration uses the Duhamel integral for accuracy.
+            - Safety factor (sf = 1) can be adjusted to include higher frequencies.
+        """
 
     # -------- SOLVER --------
-
 
     # Construct matrices
     n, dof_dict = compute_dof(model)
@@ -152,8 +170,9 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
 
     # Prepare the Fourier input frequency check
     # checked over 5s with frequency = 200Hz
-    N = 1000 # number of fourier check time steps
-    T = (1 / N) * 5 # step size
+    fft_frequency  = 200
+    N = fft_frequency * time # number of fourier check time steps
+    T = (1 / N) * time # step size
     x = np.linspace(0.0, N * T, N, endpoint=False)
 
     for force in force_global.functions.values():
@@ -183,7 +202,6 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
     # Partition matrices - free-free
     K_ff = k_global[np.ix_(free_dofs, free_dofs)]
     M_ff = m_global[np.ix_(free_dofs, free_dofs)]
-
     # --- Compute the selected low frequency eigenvalues/vectors ---
     eigvals, eigvecs = eigh(K_ff, M_ff, subset_by_value=[0, omega_max **2])
 
@@ -191,7 +209,7 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
     omegas = np.sqrt(eigvals)
 
     # time vector to consider: 5s with 10*max forcing frequency
-    time_end = 5
+    time_end = time
     time_n = int(time_end * np.floor(omega_max / (2 * np.pi))) * 10
     timespace = np.linspace(0, time_end, time_n)
 
@@ -222,15 +240,24 @@ def solve_vibration_force(model, loads,  method = 'MAM'):
         # Stack horizontally
         projected_F = np.hstack((projected_F, projected_col))
 
-    print(projected_F)
     # simplifying the matrix, i guess it is not diagonal since numerical inaccuracies - TBC
     diag_M = np.diag(projected_M)
     diag_K = np.diag(projected_K)
     diag_M = np.diag(diag_M)
     diag_K = np.diag(diag_K)
 
-    # Introduce damping termns
-    xi = np.ones(n_reduced) * 0.1
+    # Introduce damping terms using the simplified Raleigh model
+    if n_reduced >=2:
+        a_omegas = np.array([[1/omegas[0], omegas[0]], [1/omegas[1], omegas[1]]])
+        b_xis = np.array([damping, damping]).reshape(-1,1)
+        alphabeta = np.linalg.solve(a_omegas, b_xis)
+        C = alphabeta[0] * diag_M + alphabeta[1] * diag_K
+
+        xi = []
+        for i in range(0,n_reduced ): xi.append (C[i,i]/(2* diag_M[i,i] * omegas[i] ))
+    else:
+        print("Not enough modes to compute Raleigh damping. Default value used. ")
+        xi = np.ones(n_reduced) * damping
 
     # Initialize Q
     Q = np.zeros((n_reduced, time_n))

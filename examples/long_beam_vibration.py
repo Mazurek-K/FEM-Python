@@ -34,10 +34,10 @@ for i in range(0,node_n-1):
     model.add_element(i, i, i+1, 'beam', EA, EI)
 
 def input_force1(t):
-    return np.where(t <= 1, 3*np.sin(2*t*np.pi*0.5), 0)
+    return np.where(t <= 1, 0.7*np.sin(2*t*np.pi*0.5), 0)
 
 def input_force2(t):
-    return np.where(t <= 1, -12*np.sin(2*t*np.pi), 0)
+    return np.where(t <= 1, -19*np.sin(2*t*np.pi), 0)
 
 model.add_spc(0, 1,1,1)
 
