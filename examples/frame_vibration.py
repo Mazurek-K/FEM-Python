@@ -5,7 +5,7 @@ np.set_printoptions(edgeitems=30, linewidth=100000)
 from fem.mesh.model_create import Model
 from fem.postprocessing.plot_deformation import plot_input, plot_output, animate_static, animate_modal, animate_static_v2, animate_forced_vibration
 from fem.analysis.solve import solve_static, solve_modal, solve_vibration_force
-from fem.analysis.vibration_ import Vibration_loads
+from fem.analysis.vibration_ import VibrationLoads
 
 # --- Material / Section ---
 E = 10000
@@ -96,7 +96,7 @@ for i in range(n_panels + 1):
 def input_force1(t):
     return np.where(t <= 1, -0.1*np.sin(2*t*np.pi*0.5), 0)
 
-vl = Vibration_loads()
+vl = VibrationLoads()
 loaded_node = bot_nodes[-1]
 vl.add_load(loaded_node, 0, input_force1, 0)  # Pass the function and its arguments
 

@@ -172,3 +172,36 @@ def assemble_vibration_forces(vibr_loads, n, dof_dict):
             force_container.add_force(dofs[i], load_values[i])
 
     return force_container
+
+
+def assemble_base(vibr_displacements, n, dof_dict):
+
+    class DisplacementContainer:
+        def __init__(self, n):
+            self.functions = {}  # Key: DOF index, Value: function
+
+        def add_displacement(self, dof, func):
+            self.functions[dof] = func
+
+    displacement_container = DisplacementContainer(n)
+    global_spcs = np.zeros(n)
+
+    for i in range (0,n):
+        displacement_container.add_displacement(i, 0)
+
+
+    for disp in vibr_displacements:
+        node_id = disp.id_node
+        dofs = dof_dict[node_id]
+        load_values = [disp.value_x, disp.value_y, disp.value_rxy]
+
+        for i in range(len(dofs)):
+            displacement_container.add_displacement(dofs[i], load_values[i])
+
+
+    # Mark DOFs that have a function
+    for dof, val in displacement_container.functions.items():
+        if callable(val):
+            global_spcs[dof] = 1
+
+    return displacement_container, global_spcs

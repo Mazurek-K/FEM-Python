@@ -6,7 +6,7 @@ from scipy.fft import fft, fftfreq
 from scipy.integrate import cumulative_trapezoid
 
 from fem.analysis import (assemble_stiffness,assemble_forces,assemble_spcs, compute_dof,
-                          assemble_spds, assemble_mass, assemble_vibration_forces)
+                          assemble_spds, assemble_mass, assemble_vibration_forces, assemble_base)
 from colorama import init, Fore, Style
 
 
@@ -124,7 +124,13 @@ def solve_modal(model, n_modes):
     return results
 
 
+
 def solve_vibration_force(model, loads, time = 5, damping =0.01, method = 'MAM'):
+
+    # TODO: Add modal mass check
+    # TODO: Mode  Acceleration method
+    # TODO: Add log file/ stream
+
     """
         Solves the dynamic response of a structural model under vibration loads using modal analysis.
 
@@ -275,7 +281,7 @@ def solve_vibration_force(model, loads, time = 5, damping =0.01, method = 'MAM')
         for j in range(time_n):
             modal_forces[j] = U_l[:, i].T @ F_f[:, j]
 
-        # Compute Duhamel integral for each time step
+        # Compute Duhamel integral for each time step  to obtain q_i
         for j in range(time_n):
             t = timespace[j]
             # Integrate from tau=0 to tau=t
@@ -288,7 +294,6 @@ def solve_vibration_force(model, loads, time = 5, damping =0.01, method = 'MAM')
             integral = cumulative_trapezoid(integrand, timespace[:j + 1], initial=0)
             Q[i, j] = const_term * integral[-1]
 
-    ###################
 
     # --- Mode Displacement Method (MDM) ---
     u_t = np.zeros((n_free,time_n))
@@ -312,4 +317,71 @@ def solve_vibration_force(model, loads, time = 5, damping =0.01, method = 'MAM')
     return result
 
 
+
+def solve_vibration_base(model, base_movements, time = 5, damping =0.01):
+    # -------- SOLVER --------
+
+    # Construct matrices
+    n, dof_dict = compute_dof(model)
+    k_global = assemble_stiffness(model, n, dof_dict)
+    m_global = assemble_mass(model, n, dof_dict)
+
+    base_global, spc_global = assemble_base(base_movements, n, dof_dict)
+
+    # Prepare the Fourier input frequency check
+    # checked over 5s with frequency = 200Hz
+    fft_frequency = 200
+    N = fft_frequency * time  # number of fourier check time steps
+    T = (1 / N) * time  # step size
+    x = np.linspace(0.0, N * T, N, endpoint=False)
+
+    for disp in base_global.functions.values():
+        if callable(disp):
+            # Compute FFT
+            yf = fft(disp(x))
+            xf = fftfreq(N, T)[:N // 2]
+            y_values = 2.0 / N * np.abs(yf[0:N // 2])
+
+            # 1% of the peak amplitude threshold (the smaller the value the more precise the solution will be)
+            threshold = 0.01 * np.max(y_values)
+
+            # Find frequencies above threshold
+            indicies = np.where(y_values >= threshold)[0]
+
+            # Highest significant frequency
+            max_considered_freq = xf[indicies[-1]]
+            sf = 1  # safety factor
+            omega_max = 2 * np.pi * max_considered_freq * sf  # Convert frequency to angular frequency
+
+
+    # Model reduction to junction - junction
+    junction_dofs = np.where((spc_global != 0) )[0]
+    free_dofs = np.setdiff1d(np.arange(n), junction_dofs)
+    n_free = free_dofs.size
+
+    # Partition matrices - internal - internal, junction - junction
+    K_ii = k_global[np.ix_(free_dofs, free_dofs)]
+    M_ii = m_global[np.ix_(free_dofs, free_dofs)]
+
+    K_jj = k_global[np.ix_(junction_dofs, junction_dofs)]
+    M_jj = m_global[np.ix_(junction_dofs, junction_dofs)]
+
+    K_ij = k_global[np.ix_(free_dofs, junction_dofs)]
+    M_ij = m_global[np.ix_(free_dofs, junction_dofs)]
+
+    K_ji = k_global[np.ix_(junction_dofs, free_dofs)]
+    M_ji = m_global[np.ix_(junction_dofs, free_dofs)]
+
+    # The NJ-th column of the matrix S corresponds to the static shape of deformation of the
+    # structure when it is subjected to an imposed unitary displacement of the NJ-th DOF.
+
+    S = -np.linalg.inv(K_ii) @ K_ij
+
+    # time vector to consider: 5s with 10*max forcing frequency
+    time_end = time
+    time_n = int(time_end * np.floor(omega_max / (2 * np.pi))) * 10
+    timespace = np.linspace(0, time_end, time_n)
+
+    for t in timespace:
+        pass
 
