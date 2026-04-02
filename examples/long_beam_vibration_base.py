@@ -19,7 +19,7 @@ ro = 2700/1000**3
 l = 500
 mass = ro*a*a*l
 
-node_n = 10
+node_n = 12
 
 m = mass/node_n
 
@@ -36,10 +36,12 @@ for i in range(0,node_n-1):
 def input_disp(t):
     return np.where(t <= 1, np.sin(2*t*np.pi*0.5), 0)
 
-
+def input_disp_2(t):
+    return 0*t
 
 vl = VibrationDisplacements()
-vl.add_displacements([0,1], input_disp, input_disp, 0)  # Pass the function and its arguments
+vl.add_displacements([0,1], input_disp, input_disp, input_disp_2)
+
 
 res = solve_vibration_base(model, vl.displacements)
 

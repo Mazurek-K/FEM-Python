@@ -263,7 +263,7 @@ def solve_vibration_force(model, loads, time = 5, damping =0.01, method = 'MAM')
         for i in range(0,n_reduced ): xi.append (C[i,i]/(2* diag_M[i,i] * omegas[i] ))
     else:
         print("Not enough modes to compute Raleigh damping. Default value used. ")
-        xi = np.ones(n_reduced) * damping
+        xi = np.eye(n_reduced) * damping # changed from ones !
 
     # Initialize Q
     Q = np.zeros((n_reduced, time_n))
@@ -329,7 +329,7 @@ def solve_vibration_base(model, base_movements, time = 5, damping =0.01):
     base_global, spc_global = assemble_base(base_movements, n, dof_dict)
 
     # Prepare the Fourier input frequency check
-    # checked over 5s with frequency = 200Hz
+    # checked over time [s] with frequency = 200Hz
     fft_frequency = 200
     N = fft_frequency * time  # number of fourier check time steps
     T = (1 / N) * time  # step size
@@ -359,7 +359,7 @@ def solve_vibration_base(model, base_movements, time = 5, damping =0.01):
     free_dofs = np.setdiff1d(np.arange(n), junction_dofs)
     n_free = free_dofs.size
 
-    # Partition matrices - internal - internal, junction - junction
+    # Partition matrices - internal - junction
     K_ii = k_global[np.ix_(free_dofs, free_dofs)]
     M_ii = m_global[np.ix_(free_dofs, free_dofs)]
 
@@ -372,16 +372,139 @@ def solve_vibration_base(model, base_movements, time = 5, damping =0.01):
     K_ji = k_global[np.ix_(junction_dofs, free_dofs)]
     M_ji = m_global[np.ix_(junction_dofs, free_dofs)]
 
+    # --- Compute the selected low frequency eigenvalues & vectors ---
+    eigvals, eigvecs = eigh(K_ii, M_ii, subset_by_value=[0, omega_max **2])
+
+    print("eigvals shape: ", eigvals.shape)
+    print("eigvecs shape: ", eigvecs.shape)
     # The NJ-th column of the matrix S corresponds to the static shape of deformation of the
     # structure when it is subjected to an imposed unitary displacement of the NJ-th DOF.
-
     S = -np.linalg.inv(K_ii) @ K_ij
+    print("S shape: ", S.shape)
 
-    # time vector to consider: 5s with 10*max forcing frequency
+    # time vector to consider: time [s] with 10*max forcing frequency
     time_end = time
     time_n = int(time_end * np.floor(omega_max / (2 * np.pi))) * 10
     timespace = np.linspace(0, time_end, time_n)
+    print("time shape: ", timespace.shape)
 
-    for t in timespace:
-        pass
+    # Construct u_j(t) matrix
+    active_funcs = [f for f in base_global.functions.values() if callable(f)]
+    n_active = len(active_funcs)
+
+    U_l = eigvecs
+    n_reduced = U_l.shape[1] # size of the reduced problem
+
+    T_cb_upper = np.concatenate((U_l, S), axis=1)
+    T_cb_lower = np.concatenate(( np.zeros([n_active, n_reduced]), np.eye(S.shape[1]) ), axis=1)
+    T_cb = np.concatenate((T_cb_upper, T_cb_lower))
+    print("T_cb shape: ", T_cb.shape)
+
+    # for i_t, t in enumerate(timespace):
+    #     for j, func in enumerate(active_funcs):
+    #         u_j_matrix[i_t, j] = func(t)
+    #
+    # for i_t, t in enumerate(timespace):
+    #     u_j = u_j_matrix[i_t, :]
+    #     u_iqs = S @ u_j
+
+    M_r = T_cb.transpose() @ m_global @ T_cb
+    print("M_r shape: ",M_r.shape )
+    diag_M  = M_r[0: n_reduced , 0: n_reduced ]
+    diag_M = np.diag(np.diag(diag_M))
+    L = M_r[0: n_reduced ,  n_reduced :]
+    print("L shape: ", L.shape)
+
+    K_r = T_cb.transpose() @ k_global @ T_cb
+    K_r = np.diag(np.diag(K_r))  # simplification
+    K_r_reduced = K_r[0: n_reduced , 0: n_reduced ]
+
+    print("K_r shape : ", K_r.shape)
+
+    # Simplified Raleigh damping model
+    omegas = np.sqrt(eigvals)
+    if n_reduced >=2:
+        a_omegas = np.array([[1/omegas[0], omegas[0]], [1/omegas[1], omegas[1]]])
+        b_xis = np.array([damping, damping]).reshape(-1,1)
+        alphabeta = np.linalg.solve(a_omegas, b_xis)
+        C = alphabeta[0] * diag_M + alphabeta[1] * K_r_reduced
+
+        xi = []
+        for i in range(0,n_reduced ): xi.append (C[i,i]/(2* diag_M[i,i] * omegas[i] ))
+    else:
+        print("Not enough modes to compute Raleigh damping. Default value used. ")
+        xi = np.eye(n_reduced) * damping # changed from ones !
+
+  # Initialize Q
+    Q = np.zeros((n_reduced, time_n))
+
+
+    u_j_matrix = np.zeros((time_n, n_active))
+    for i_t, t in enumerate(timespace):
+        for j, func in enumerate(active_funcs):
+            u_j_matrix[i_t, j] = func(t)
+
+    for i_t, t in enumerate(timespace):
+        u_j = u_j_matrix[i_t, :]
+        u_iqs = S @ u_j
+
+    u_j_dot = np.gradient(u_j_matrix, time_n, axis = 0)
+    u_j_ddot = np.gradient(u_j_dot, time_n, axis = 0)
+
+
+    # Precompute constants
+    for i in range(n_reduced):
+        m_i = diag_M[i, i]
+        omega_i = omegas[i]
+        xi_i = xi[i]
+        omega_i_d = omega_i * np.sqrt(1 - xi_i ** 2)
+        const_term = 1 / (m_i * omega_i_d)
+
+        # Precompute modal forces for all time steps
+        modal_forces = np.zeros(time_n)
+        for j in range(time_n):
+            modal_forces[j] = -L @ u_j_ddot[:, j]
+
+        # Compute Duhamel integral for each time step  to obtain q_i
+        for j in range(time_n):
+            t = timespace[j]
+            # Integrate from tau=0 to tau=t
+            integrand = np.array([
+                np.exp(-xi_i * omega_i * (t - tau)) *
+                np.sin(omega_i_d * (t - tau)) *
+                modal_forces[k]
+                for k, tau in enumerate(timespace[:j + 1])
+            ])
+            integral = cumulative_trapezoid(integrand, timespace[:j + 1], initial=0)
+            Q[i, j] = const_term * integral[-1]
+
+
+    # --- Mode Displacement Method (MDM) ---
+    u_t = np.zeros((n_free,time_n))
+    for i_t, t in enumerate(timespace):
+        uiq = np.zeros((n_free,1))
+        for i in range(0,n_reduced):
+            col =  U_l[:,i] * Q[i,i_t]
+            uiq += col.reshape(-1,1)
+
+        u_t[:,i_t] = uiq.flatten()
+
+    # Combine to global result array
+    u_t_full = np.zeros((n,time_n))
+    u_t_full[free_dofs, :] = u_t
+
+    # Assign results
+    result = Results_vibration(model)
+    result.U_t = u_t_full
+    result.dof_dict = dof_dict
+    result.times = timespace
+    return result
+
+
+
+
+
+
+
+
 

@@ -175,6 +175,44 @@ def assemble_vibration_forces(vibr_loads, n, dof_dict):
 
 
 def assemble_base(vibr_displacements, n, dof_dict):
+    """
+    Assemble a displacement container and identify constrained DOFs.
+
+    This function builds a container that maps each degree of freedom (DOF)
+    to its associated displacement value or function. It also generates a
+    global array indicating which DOFs are constrained by callable functions.
+
+    Parameters
+    ----------
+    vibr_displacements : iterable
+        Collection of displacement objects. Each object is expected to have:
+        - id_node : identifier of the node
+        - value_x : displacement in x direction (or function)
+        - value_y : displacement in y direction (or function)
+        - value_rxy : rotational displacement (or function)
+
+    n : int
+        Total number of degrees of freedom in the system.
+
+    dof_dict : dict
+        Dictionary mapping node IDs to their corresponding DOF indices.
+
+    Returns
+    -------
+    displacement_container : DisplacementContainer
+        Object storing displacement values/functions for each DOF.
+
+    global_spcs : numpy.ndarray
+        Array of length `n` where:
+        - 1 indicates the DOF is constrained by a callable function
+        - 0 indicates the DOF is free or has a constant value
+
+    Notes
+    -----
+    - All DOFs are initially assigned a value of 0.
+    - Displacements from `vibr_displacements` overwrite the default values.
+    - A DOF is marked in `global_spcs` only if its value is callable.
+    """
 
     class DisplacementContainer:
         def __init__(self, n):
@@ -201,7 +239,7 @@ def assemble_base(vibr_displacements, n, dof_dict):
 
     # Mark DOFs that have a function
     for dof, val in displacement_container.functions.items():
-        if callable(val):
+        if callable(val) :
             global_spcs[dof] = 1
 
     return displacement_container, global_spcs
